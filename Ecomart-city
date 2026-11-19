@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoSmart City - Simulador Interativo</title>
+    <style>
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --bg-dark: #090d16;
+            --card-bg: #1e293b;
+            --text-light: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* TELA DE INTRODUÇÃO E ESCOLHA DE AVATAR */
+        #intro-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f172a 0%, #022c22 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        #intro-screen h1 {
+            font-size: 2.5rem;
+            color: #34d399;
+            margin-bottom: 0.5rem;
+        }
+
+        #intro-screen p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            max-width: 600px;
+        }
+
+        .avatar-selection {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .avatar-card {
+            background: var(--card-bg);
+            border: 3px solid #334155;
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 160px;
+            text-align: center;
+        }
+
+        .avatar-card:hover, .avatar-card.selected {
+            border-color: var(--primary);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+        }
+
+        .avatar-icon {
+            font-size: 3.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .start-btn {
+            background-color: var(--primary);
+            color: #0f172a;
+            border: none;
+            padding: 0.8rem 2.5rem;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .start-btn:hover {
+            background-color: #34d399;
+            transform: scale(1.05);
+        }
+
+        /* MODAL DO PANFLETO DE BOAS-VINDAS */
+        #pamphlet-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2500;
+            backdrop-filter: blur(5px);
+        }
+
+        .pamphlet-content {
+            background: #fff;
+            color: #1e293b;
+            padding: 2.5rem;
+            border-radius: 16px;
+            max-width: 500px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .pamphlet-content h2 {
+            color: #059669;
+            margin-bottom: 1rem;
+        }
+
+        .pamphlet-content p {
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            color: #475569;
+        }
+
+        /* HUD DO JOGO (CENA 3D) */
+        #game-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: none;
+            z-index: 100;
+        }
+
+        .hud-topbar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .hud-card {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid #334155;
+            padding: 0.8rem 1.2rem;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            font-size: 0.95rem;
+        }
+
+        .ticket-counter {
+            color: #34d399;
+            font-weight: bold;
+        }
+
+        /* PAINEL DE CONTROLE LATERAL */
+        .hud-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid #334155;
+            padding: 1rem;
+            border-radius: 12px;
+            pointer-events: auto;
+            max-width: 260px;
+        }
+
+        .hud-controls h3 {
+            font-size: 1rem;
+            color: #34d399;
+            margin-bottom: 0.5rem;
+        }
+
+        .ctrl-btn {
+            background: #334155;
+            color: white;
+            border: none;
+            padding: 0.5rem 0.8rem;
+            margin-top: 5px;
+            width: 100%;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            text-align: left;
+            transition: 0.2s;
+        }
+
+        .ctrl-btn:hover {
+            background: #475569;
+        }
+
+        .ctrl-btn.active {
+            background: var(--primary);
+            color: #0f172a;
+            font-weight: bold;
+        }
+
+        /* PAINEL DE INFORMAÇÃO AO CLICAR EM PRÉDIOS/CASAS */
+        #info-popup {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid var(--primary);
+            padding: 1.2rem;
+            border-radius: 12px;
+            max-width: 320px;
+            pointer-events: auto;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #info-popup h4 {
+            color: #34d399;
+            margin-bottom: 0.5rem;
+        }
+
+        #info-popup p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .close-popup {
+            background: #334155;
+            color: white;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        /* MENSAGEM DE VITÓRIA */
+        #victory-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 4000;
+            text-align: center;
+        }
+
+        .victory-box {
+            background: #1e293b;
+            border: 3px solid var(--primary);
+            padding: 3rem;
+            border-radius: 20px;
+            max-width: 550px;
+        }
+
+        .victory-box h2 {
+            font-size: 2.2rem;
+            color: #34d399;
+            margin-bottom: 1rem;
+        }
+
+        .victory-box p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+    <!-- Three.js para o Simulador 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+    <!-- TELA 1: ESCOLHA DE AVATAR -->
+    <div id="intro-screen">
+        <h1>Bem-vindo à EcoSmart City</h1>
+        <p>Explore a cidade inteligente, descubra zonas tecnológicas, área rural, parques, energia limpa e colete os 3 tickets escondidos!</p>
+        
+        <div class="avatar-selection">
+            <div class="avatar-card selected" onclick="selectAvatar('feminino', this)">
+                <div class="avatar-icon">👩‍💼</div>
+                <h3>Avatar Feminino</h3>
+            </div>
+            <div class="avatar-card" onclick="selectAvatar('masculino', this)">
+                <div class="avatar-icon">👨‍💼</div>
+                <h3>Avatar Masculino</h3>
+            </div>
+        </div>
+
+        <button class="start-btn" onclick="startExperience()">Entrar na Cidade →</button>
+    </div>
+
+    <!-- MODAL DO PANFLETO DE BOAS-VINDAS (ENTREGUE PELO MORADOR) -->
+    <div id="pamphlet-modal">
+        <div class="pamphlet-content">
+            <h2>📜 Panfleto de Boas-Vindas!</h2>
+            <p><b>Olá, cidadão!</b> Seja muito bem-vindo à EcoSmart City. Nossa cidade é totalmente sustentável, integrando tecnologia verde, automação urbana, energia eólica, tratamento de esgoto ecológico e parques de diversão na praça central.</p>
+            <p><b>Sua Missão:</b> Explore a praça central, visite o Hospital, o Quartel de Bombeiros e encontre os <b>3 tickets escondidos</b> para vencer o jogo!</p>
+            <button class="start-btn" onclick="closePamphlet()" style="padding: 0.6rem 2rem; font-size: 1rem;">Explorar a Cidade Agora!</button>
+        </div>
+    </div>
+
+    <!-- HUD DO SIMULADOR 3D -->
+    <div id="game-hud">
+        <div class="hud-topbar">
+            <div class="hud-card">
+                👤 Avatar: <span id="current-avatar-name" style="color:#34d399; font-weight:bold;">Feminino</span>
+            </div>
+            <div class="hud-card">
+                🎟️ Tickets Encontrados: <span id="ticket-count" class="ticket-counter">0 / 3</span>
+            </div>
+        </div>
+
+        <div class="hud-controls">
+            <h3>🎮 Controles da Cidade</h3>
+            <button class="ctrl-btn active" id="btn-daynight" onclick="toggleDay">☀️ Modo Dia / Noite</button>
+            <button class="ctrl-btn active" id="btn-fountain" onclick="toggleFountain">⛲ Fonte Central</button>
+            <button class="ctrl-btn active" id="btn-xmas" onclick="toggleXmas">🎄 Luzes de Natal</button>
+            <button class="ctrl-btn" onclick="resetCamera">🎥 Centralizar Câmera</button>
+        </div>
+
+        <div id="info-popup">
+            <h4 id="popup-title">Título</h4>
+            <p id="popup-desc">Descrição do local.</p>
+            <button class="close-popup" onclick="closePopup()">Fechar</button>
+        </div>
+    </div>
+
+    <!-- TELA DE VITÓRIA -->
+    <div id="victory-modal">
+        <div class="victory-box">
+            <h2>🎉 Parabéns! Missão Concluída!</h2>
+            <p>Você explorou toda a EcoSmart City, encontrou os 3 tickets escondidos (no Hospital, no Bombeiro e na Praça) e provou ser um mestre em cidades inteligentes!</p>
+            <button class="start-btn" onclick="location.reload()">Jogar Novamente ↺</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedAvatarType = 'Feminino';
+        let ticketsFound = 0;
+        let ticketsCollected = { hospital: false, fire: false, plaza: false };
+        let isNight = false;
+        let fountainActive = true;
+        let xmasActive = true;
+
+        function selectAvatar(type, element) {
+            document.querySelectorAll('.avatar-card').forEach(c => c.classList.remove('selected'));
+            element.classList.add('selected');
+            selectedAvatarType = type === 'feminino' ? 'Feminino' : 'Masculino';
+        }
+
+        function startExperience() {
+            document.getElementById('intro-screen').style.display = 'none';
+            document.getElementById('current-avatar-name').textContent = selectedAvatarType;
+            // Mostra o panfleto logo na entrada
+            document.getElementById('pamphlet-modal').style.display = 'flex';
+        }
+
+        function closePamphlet() {
+            document.getElementById('pamphlet-modal').style.display = 'none';
+            document.getElementById('game-hud').style.display = 'block';
+            init3DWorld();
+        }
+
+        function closePopup() {
+            document.getElementById('info-popup').style.display = 'none';
+        }
+
+        // --- MOTOR 3D (THREE.JS) ---
+        let scene, camera, renderer, controls;
+        let interactiveObjects = [];
+        let waterParticles = [], xmasBulbs = [], windowMaterials = [], cars = [], robots = [];
+
+        function init3DWorld() {
+            const container = document.body;
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb);
+            scene.fog = new THREE.FogExp2(0x87ceeb, 0.005);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(50, 45, 60);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+            // Iluminação
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            window.sunLight = new THREE.DirectionalLight(0xfff5e6, 1.1);
+            window.sunLight.position.set(60, 90, 50);
+            window.sunLight.castShadow = true;
+            scene.add(window.sunLight);
+
+            // Construir o mapa baseado no seu desenho:
+            buildCityLayout();
+
+            // Interação com o Mouse (Cliques em prédios, casas, NPC do panfleto e tickets)
+            window.addEventListener('click', onMouseClick);
+            window.addEventListener('resize', onWindowResize);
+
+            animate();
+        }
+
+        function buildCityLayout() {
+            // 1. Chão Geral (Grama e Ruas Cinzas)
+            const groundGeo = new THREE.PlaneGeometry(160, 160);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x2d6a4f, roughness: 0.9 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            scene.add(ground);
+
+            // Ruas Cinzas em Cruz
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x333842, roughness: 0.8 });
+            const roadNS = new THREE.Mesh(new THREE.PlaneGeometry(14, 160), roadMat);
+            roadNS.rotation.x = -Math.PI / 2;
+            roadNS.position.y = 0.02;
+            scene.add(roadNS);
+
+            const roadEW = new THREE.Mesh(new THREE.PlaneGeometry(160, 14), roadMat);
+            roadEW.rotation.x = -Math.PI / 2;
+            roadEW.position.y = 0.02;
+            scene.add(roadEW);
+
+            // 2. Praça Central Circular com Banco, Lago de Pedras e Fonte Central
+            const plazaGroup = new THREE.Group();
+            plazaGroup.position.set(0, 0.05, 0);
+
+            const plazaBase = new THREE.Mesh(
+                new THREE.CylinderGeometry(18, 18, 0.2, 48),
+                new THREE.MeshStandardMaterial({ color: 0x64748b })
+            );
+            plazaBase.receiveShadow = true;
+            plazaGroup.add(plazaBase);
+
+            // Fonte Central (com cascatas de água)
+            const fountainBasin = new THREE.Mesh(
+                new THREE.CylinderGeometry(5, 5.3, 1, 32),
+                new THREE.MeshStandardMaterial({ color: 0xcbd5e1 })
+            );
+            fountainBasin.position.y = 0.6;
+            plazaGroup.add(fountainBasin);
+
+            const water = new THREE.Mesh(
+                new THREE.CylinderGeometry(4.6, 4.6, 0.9, 32),
+                new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0284c7, emissiveIntensity: 0.3 })
+            );
+            water.position.y = 0.65;
+            plazaGroup.add(water);
+
+            // Jato d'água da fonte
+            for (let i = 0; i < 30; i++) {
+                const drop = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.12, 6, 6),
+                    new THREE.MeshBasicMaterial({ color: 0xe0f2fe })
+                );
+                drop.userData = { angle: (i / 30) * Math.PI * 2, speed: 0.03 + Math.random() * 0.03, progress: Math.random() };
+                plazaGroup.add(drop);
+                waterParticles.push(drop);
+            }
+
+            // Árvore de Natal com pisca-piscas brilhantes na Praça
+            const treeGroup = new THREE.Group();
+            treeGroup.position.set(8, 0.1, 0);
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 2, 10), new THREE.MeshStandardMaterial({color: 0x5c4033}));
+            trunk.position.y = 1;
+            treeGroup.add(trunk);
+
+            const cone1 = new THREE.Mesh(new THREE.ConeGeometry(3, 4, 12), new THREE.MeshStandardMaterial({color: 0x15803d}));
+            cone1.position.y = 3;
+            treeGroup.add(cone1);
+            const cone2 = new THREE.Mesh(new THREE.ConeGeometry(2.2, 3.5, 12), new THREE.MeshStandardMaterial({color: 0x16a34a}));
+            cone2.position.y = 5.5;
+            treeGroup.add(cone2);
+
+            // Bolas/Luzes de Natal
+            for (let b = 0; b < 12; b++) {
+                const angle = (b / 12) * Math.PI * 2;
+                const bulb = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.15, 8, 8),
+                    new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xff0055, emissiveIntensity: 1.5 })
+                );
+                bulb.position.set(Math.cos(angle) * 1.8, 4 + (b % 2) * 2, Math.sin(angle) * 1.8);
+                treeGroup.add(bulb);
+                xmasBulbs.push(bulb);
+            }
+            plazaGroup.add(treeGroup);
+
+            // Homem Entregador de Panfletos na entrada da Praça
+            const npcGroup = new THREE.Group();
+            npcGroup.position.set(0, 0, 12);
+            npcGroup.userData = { type: 'npc', title: 'Entregador de Panfletos', desc: 'Você recebeu o panfleto da cidade inteligente!' };
+            
+            const npcBody = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8), new THREE.MeshStandardMaterial({color: 0x2563eb}));
+            npcBody.position.y = 0.9;
+            npcGroup.add(npcBody);
+            const npcHead = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({color: 0xfdbcb4}));
+            npcHead.position.y = 2.0;
+            npcGroup.add(npcHead);
+            
+            interactiveObjects.push(npcGroup);
+            plazaGroup.add(npcGroup);
+
+            // TICKET 3 ESCONDIDO NA PRAÇA
+            const plazaTicket = createTicketMesh();
+            plazaTicket.position.set(-6, 0.2, 5);
+            plazaTicket.userData = { type: 'ticket', id: 'plaza' };
+            interactiveObjects.push(plazaTicket);
+            plazaGroup.add(plazaTicket);
+
+            scene.add(plazaGroup);
+
+            // 3. Prédios e Edifícios Inteligentes (com janelas e telhados verdes)
+            buildBuildings();
+
+            // 4. Área Rural com Lago e Lave (ou Lago Rural)
+            buildRuralArea();
+
+            // 5. Área Tecnológica: Energia Eólica, Tratamento de Esgoto e Painéis Solares
+            buildTechEcoArea();
+
+            // 6. Carros Futuristas e Robôs nas ruas
+            buildMovingUnits();
+        }
+
+        function createTicketMesh() {
+            const ticketGeo = new THREE.BoxGeometry(0.8, 0.1, 0.5);
+            const ticketMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, emissive: 0xca8a04, emissiveIntensity: 0.8 });
+            return new THREE.Mesh(ticketGeo, ticketMat);
+        }
+
+        function buildBuildings() {
+            const buildingSpecs = [
+                // Prédios Superiores (Esquerda e Direita)
+                { x: -35, z: -35, w: 16, d: 16, h: 32, name: 'Prédio Residencial Smart', desc: 'Prédio com automação de energia e telhado verde.' },
+                { x: 35, z: -35, w: 16, d: 16, h: 36, name: 'Torre Tecnológica', desc: 'Centro de monitoramento da cidade inteligente.' },
+                // HOSPITAL (Com TICKET 1 escondido)
+                { x: -35, z: 35, w: 18, d: 16, h: 28, name: 'Hospital Central Smart', desc: 'Hospital com atendimento automatizado e telemedicina.', hasTicket: 'hospital' },
+                // BOMBEIRO (Com TICKET 2 escondido)
+                { x: 35, z: 35, w: 16, d: 16, h: 24, name: 'Quartel de Bombeiros Inteligente', desc: 'Base de resgate com sensores de alerta de incêndio.', hasTicket: 'fire' }
+            ];
+
+            buildingSpecs.forEach(spec => {
+                const group = new THREE.Group();
+                group.position.set(spec.x, 0, spec.z);
+                group.userData = { type: 'building', title: spec.name, desc: spec.desc };
+
+                const wallMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3 });
+                const body = new THREE.Mesh(new THREE.BoxGeometry(spec.w, spec.h, spec.d), wallMat);
+                body.position.y = spec.h / 2;
+                group.add(body);
+
+                // Telhado Verde nos prédios
+                const roof = new THREE.Mesh(new THREE.BoxGeometry(spec.w, 0.6, spec.d), new THREE.MeshStandardMaterial({ color: 0x22c55e }));
+                roof.position.y = spec.h + 0.3;
+                group.add(roof);
+
+                // Se tiver ticket escondido no prédio
+                if (spec.hasTicket) {
+                    const ticket = createTicketMesh();
+                    ticket.position.set(0, spec.h + 0.8, 0);
+                    ticket.userData = { type: 'ticket', id: spec.hasTicket };
+                    interactiveObjects.push(ticket);
+                    group.add(ticket);
+                }
+
+                interactiveObjects.push(group);
+                scene.add(group);
+            });
+        }
+
+        function buildRuralArea() {
+            // Área Rural (canto noroeste do mapa)
+            const ruralGroup = new THREE.Group();
+            ruralGroup.position.set(-55, 0, -55);
+            ruralGroup.userData = { type: 'rural', title: 'Área Rural Sustentável', desc: 'Lago natural, plantações orgânicas e casas de campo ecológicas.' };
+
+            const lake = new THREE.Mesh(
+                new THREE.CircleGeometry(10, 32),
+                new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.1 })
+            );
+            lake.rotation.x = -Math.PI / 2;
+            lake.position.y = 0.1;
+            ruralGroup.add(lake);
+
+            interactiveObjects.push(ruralGroup);
+            scene.add(ruralGroup);
+        }
+
+        function buildTechEcoArea() {
+            // Área de Energia Eólica e Tratamento de Esgoto (canto sudeste)
+            const techGroup = new THREE.Group();
+            techGroup.position.set(55, 0, -55);
+            techGroup.userData = { type: 'tech', title: 'Parque de Energia Limpa & Esgoto', desc: 'Geradores eólicos e estação de tratamento ecológico de água.' };
+
+            // Torre Eólica
+            const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.8, 15, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+            tower.position.y = 7.5;
+            techGroup.add(tower);
+
+            interactiveObjects.push(techGroup);
+            scene.add(techGroup);
+        }
+
+        function buildMovingUnits() {
+            // Carros Futuristas
+            for (let i = 0; i < 3; i++) {
+                const car = new THREE.Mesh(
+                    new THREE.BoxGeometry(2.5, 1, 1.2),
+                    new THREE.MeshStandardMaterial({ color: i === 0 ? 0x10b981 : 0x38bdf8, metalness: 0.6 })
+                );
+                car.position.set(-50 + i * 40, 0.5, 5);
+                scene.add(car);
+                cars.push(car);
+            }
+        }
+
+        // --- INTERAÇÃO E CLIQUE NOS OBJETOS ---
+        function onMouseClick(event) {
+            // Ignora cliques nos menus HTML
+            if (event.clientX < 280 && event.clientY < 250) return;
+
+            const mouse = new THREE.Vector2(
+                (event.clientX / window.innerWidth) * 2 - 1,
+                -(event.clientY / window.innerHeight) * 2 + 1
+            );
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+            if (intersects.length > 0) {
+                let obj = intersects[0].object;
+                
+                // Sobe na hierarquia até achar o objeto interativo principal
+                while (obj && !obj.userData.type && obj.parent) {
+                    obj = obj.parent;
+                }
+
+                if (obj && obj.userData) {
+                    if (obj.userData.type === 'ticket') {
+                        collectTicket(obj.userData.id, obj);
+                    } else if (obj.userData.type === 'npc') {
+                        document.getElementById('pamphlet-modal').style.display = 'flex';
+                    } else if (obj.userData.type) {
+                        showPopup(obj.userData.title, obj.userData.desc);
+                    }
+                }
+            }
+        }
+
+        function collectTicket(id, meshObj) {
+            if (!ticketsCollected[id]) {
+                ticketsCollected[id] = true;
+                ticketsFound++;
+                document.getElementById('ticket-count').textContent = `${ticketsFound} / 3`;
+                
+                // Remove o ticket da cena
+                meshObj.visible = false;
+
+                if (ticketsFound === 3) {
+                    setTimeout(() => {
+                        document.getElementById('victory-modal').style.display = 'flex';
+                    }, 400);
+                }
+            }
+        }
+
+        function showPopup(title, desc) {
+            document.getElementById('popup-title').textContent = title;
+            document.getElementById('popup-desc').textContent = desc;
+            document.getElementById('info-popup').style.display = 'block';
+        }
+
+        // --- CONTROLES DO PAINEL ---
+        function toggleDay() {
+            isNight = !isNight;
+            const btn = document.getElementById('btn-daynight');
+            if (isNight) {
+                scene.background = new THREE.Color(0x050811);
+                scene.fog.color = new THREE.Color(0x050811);
+                window.sunLight.intensity = 0.15;
+                btn.classList.remove('active');
+            } else {
+                scene.background = new THREE.Color(0x87ceeb);
+                scene.fog.color = new THREE.Color(0x87ceeb);
+                window.sunLight.intensity = 1.1;
+                btn.classList.add('active');
+            }
+        }
+
+        function toggleFountain() {
+            fountainActive = !fountainActive;
+            const btn = document.getElementById('btn-fountain');
+            waterParticles.forEach(p => p.visible = fountainActive);
+            btn.classList.toggle('active', fountainActive);
+        }
+
+        function toggleXmas() {
+            xmasActive = !xmasActive;
+            const btn = document.getElementById('btn-xmas');
+            xmasBulbs.forEach(b => b.material.emissiveIntensity = xmasActive ? 1.5 : 0);
+            btn.classList.toggle('active', xmasActive);
+        }
+
+        function resetCamera() {
+            camera.position.set(50, 45, 60);
+            controls.target.set(0, 0, 0);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- LOOP DE ANIMAÇÃO ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Animação da fonte
+            if (fountainActive) {
+                waterParticles.forEach(p => {
+                    p.userData.progress += p.userData.speed;
+                    if (p.userData.progress > 1) p.userData.progress = 0;
+                    const t = p.userData.progress;
+                    const r = t * 3.8;
+                    const h = 2.2 + Math.sin(t * Math.PI) * 1.8 - (t * t * 1.5);
+                    p.position.set(Math.cos(p.userData.angle) * r, Math.max(0.6, h), Math.sin(p.userData.angle) * r);
+                });
+            }
+
+            // Animação de movimento dos carros
+            cars.forEach((car, index) => {
+                car.position.x += 0.2;
+                if (car.position.x > 75) car.position.x = -75;
+            });
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
